@@ -9,6 +9,8 @@ interface SpatialViewportProps {
   activeLayers: ActiveLayerState[];
   activePlanetaryLayerId: string | null;
   importedCollection: CandidateFeatureCollection | null;
+  activeBasemapId: string;
+  showFieldAnalogs: boolean;
   onHoverCoord: (coord: Coordinate) => void;
   onClickedCoord: (coord: Coordinate) => void;
   flyToTarget: { lng: number; lat: number; zoom?: number } | null;
@@ -21,6 +23,8 @@ export const SpatialViewport: React.FC<SpatialViewportProps> = ({
   activeLayers,
   activePlanetaryLayerId,
   importedCollection,
+  activeBasemapId,
+  showFieldAnalogs,
   onHoverCoord,
   onClickedCoord,
   flyToTarget,
@@ -43,6 +47,8 @@ export const SpatialViewport: React.FC<SpatialViewportProps> = ({
           activeLayers={activeLayers}
           activePlanetaryLayerId={activePlanetaryLayerId}
           importedCollection={importedCollection}
+          activeBasemapId={activeBasemapId}
+          showFieldAnalogs={showFieldAnalogs}
           onHoverCoord={onHoverCoord}
           onClickedCoord={onClickedCoord}
           flyToTarget={flyToTarget}
@@ -57,6 +63,8 @@ export const SpatialViewport: React.FC<SpatialViewportProps> = ({
           activeLayers={activeLayers}
           activePlanetaryLayerId={activePlanetaryLayerId}
           importedCollection={importedCollection}
+          activeBasemapId={activeBasemapId}
+          showFieldAnalogs={showFieldAnalogs}
           onHoverCoord={onHoverCoord}
           onClickedCoord={onClickedCoord}
           flyToTarget={flyToTarget}

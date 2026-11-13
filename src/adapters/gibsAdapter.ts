@@ -23,20 +23,27 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     scientificNotes: 'Surface reflectance corrected for atmospheric gases and aerosols. Swath observation covers the entire Earth every 1 to 2 days.',
     dataQualityLimitations: 'Sunlight required; obscured by high-altitude meteorological cloud formations and polar winter darkness.',
     // Visual rendering enhancement only — does NOT alter source tile data or scientific values.
-    // MODIS CorrectedReflectance products are atmospherically corrected but not gamma-stretched
-    // for display, resulting in a washed-out appearance. These parameters compensate at the
-    // frontend rendering layer (MapLibre paint props / Cesium ImageryLayer props).
+    // MODIS CorrectedReflectance products are atmospherically corrected but NOT gamma-stretched
+    // for display, resulting in a washed-out, low-contrast appearance (known characteristic).
+    //
+    // BLACK SWATH GAPS: Daily MODIS tiles contain genuine black (RGB 0,0,0) pixels in unobserved
+    // orbital swath regions — these are JPEG-encoded missing-data areas with no alpha channel.
+    // They cannot be made transparent at the frontend without server-side tile processing.
+    // The correct handling is: keep basemap opacity=1 beneath, so gaps show the underlying
+    // cartographic reference rather than solid black. We also apply brightnessMin=0 (NOT >0)
+    // to avoid falsely lifting these black regions to grey (which makes gaps MORE visible).
+    // The blendMode and multiply approach is handled via MapLibre layer ordering.
     visualEnhancement: {
-      // MapLibre GL raster paint properties (-1 to 1 range)
-      contrast: 0.3,       // Moderate contrast lift to separate land/ocean/cloud tones
-      saturation: 0.2,     // Slight saturation boost for natural colour definition
-      brightnessMin: 0.03, // Lift deep shadows without crushing blacks
-      brightnessMax: 1.0,  // Keep full highlight range
+      // MapLibre GL raster paint properties (-1 to 1 range, 0 = neutral)
+      contrast: 0.55,      // Strong contrast lift — separates land, ocean, cloud, snow tones
+      saturation: 0.3,     // Meaningful saturation for natural colour definition
+      brightnessMin: 0.0,  // MUST be 0: lifting blacks makes swath gaps grey, not transparent
+      brightnessMax: 0.95, // Very slight highlight compression to avoid white clipping on clouds
       // Cesium ImageryLayer properties (1.0 = neutral)
-      cesiumContrast: 1.3,    // Equivalent moderate contrast lift in Cesium scale
-      cesiumSaturation: 1.25, // Slight saturation boost
-      cesiumGamma: 0.85,      // < 1 brightens midtones (corrects display gamma)
-      cesiumBrightness: 1.05  // Very subtle overall brightening
+      cesiumContrast: 1.6,    // Strong contrast lift equivalent
+      cesiumSaturation: 1.4,  // Rich natural colour saturation
+      cesiumGamma: 0.75,      // < 1 significantly brightens midtones for display gamma correction
+      cesiumBrightness: 1.0   // Neutral — do not globally brighten, let gamma handle midtones
     }
   },
   {
@@ -52,9 +59,21 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     resolution: '375m / pixel',
     sensor: 'VIIRS on NASA/NOAA Suomi National Polar-orbiting Partnership (SNPP)',
     maxZoom: 9,
-    description: 'Next-generation polar-orbiting imaging radiometer observing Earth surface features, arid desert basins, salt flats, and coastal dunes.',
+    description: 'Next-generation polar-orbiting imaging radiometer observing Earth surface features, arid desert basins, salt flats, and coastal dunes. VIIRS has a wider swath (3,000 km) than MODIS (2,330 km) and achieves near-global daily coverage with narrower black-gap regions.',
     scientificNotes: 'Calibrated radiance product combining imagery and moderate resolution bands for land-atmosphere boundary observation.',
-    dataQualityLimitations: 'Sensitive to heavy cloud cover and polar twilight geometry.'
+    dataQualityLimitations: 'Sensitive to heavy cloud cover and polar twilight geometry. Daily swath gaps are narrower than MODIS but still present at some latitudes.',
+    // VIIRS has a wider 3,000 km swath so daily gaps are smaller than MODIS.
+    // Source imagery is similarly atmospherically corrected but not display-gamma stretched.
+    visualEnhancement: {
+      contrast: 0.5,       // Strong contrast — VIIRS imagery is similarly washed-out
+      saturation: 0.28,    // Natural colour boost
+      brightnessMin: 0.0,  // Keep blacks at 0 to avoid making swath gaps grey
+      brightnessMax: 0.95, // Slight highlight compression
+      cesiumContrast: 1.55,
+      cesiumSaturation: 1.35,
+      cesiumGamma: 0.78,
+      cesiumBrightness: 1.0
+    }
   },
   {
     id: 'MODIS_Aqua_CorrectedReflectance_TrueColor',
@@ -75,17 +94,17 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     // Visual rendering enhancement only — does NOT alter source tile data or scientific values.
     // Aqua afternoon pass has slightly different illumination geometry from Terra morning pass,
     // so enhancement is tuned independently with marginally softer contrast to reflect that.
+    // brightnessMin MUST remain 0: lifting blacks makes swath gap regions grey rather than
+    // allowing the basemap to show through (see Terra notes above for full explanation).
     visualEnhancement: {
-      // MapLibre GL raster paint properties (-1 to 1 range)
-      contrast: 0.28,      // Slightly softer than Terra due to afternoon illumination geometry
-      saturation: 0.18,    // Slight saturation boost for colour definition
-      brightnessMin: 0.03, // Lift deep shadows without crushing blacks
-      brightnessMax: 1.0,  // Keep full highlight range
-      // Cesium ImageryLayer properties (1.0 = neutral)
-      cesiumContrast: 1.28,   // Slightly softer contrast than Terra
-      cesiumSaturation: 1.2,  // Matching saturation boost
-      cesiumGamma: 0.87,      // < 1 brightens midtones; slightly softer than Terra
-      cesiumBrightness: 1.03  // Very subtle brightening
+      contrast: 0.5,       // Strong contrast (slightly softer than Terra)
+      saturation: 0.28,    // Natural colour boost
+      brightnessMin: 0.0,  // Keep blacks at 0 — do not lift swath gaps
+      brightnessMax: 0.95, // Slight highlight compression to prevent cloud clipping
+      cesiumContrast: 1.55,
+      cesiumSaturation: 1.35,
+      cesiumGamma: 0.78,   // Brighter midtones, slightly stronger than Terra
+      cesiumBrightness: 1.0
     }
   },
   {

@@ -361,6 +361,20 @@ export const Map2D: React.FC<Map2DProps> = ({
   return (
     <div className="relative w-full h-full bg-[#f4f1ea]">
       <div ref={mapContainerRef} className="w-full h-full" />
+      {/* Honest scientific notice: MODIS daily swath gaps are genuine missing-data regions,
+          not rendering artefacts. They appear as black areas in JPEG tiles because MODIS
+          CorrectedReflectance products have no alpha channel — missing pixels are encoded
+          as solid black (RGB 0,0,0). This cannot be corrected at the frontend. */}
+      {activeLayers.some(l => l.visible && l.layer.id.startsWith('MODIS_') && l.layer.id.includes('TrueColor')) && (
+        <div className="absolute top-4 right-4 z-10 max-w-[260px] px-3 py-2 rounded-lg bg-white/95 border border-[#e4dfd5] shadow-sm backdrop-blur-sm pointer-events-none">
+          <p className="text-[9px] font-mono text-[#636c76] leading-relaxed">
+            <span className="text-[#8f5635] font-semibold">Black regions = genuine data gaps.</span>{' '}
+            Daily MODIS imagery covers ~83% of Earth per day — orbital swath gaps
+            are inherent to the instrument. Use <span className="font-semibold text-[#275273]">VIIRS Suomi NPP</span> for
+            broader daily coverage (3,000 km swath vs MODIS 2,330 km).
+          </p>
+        </div>
+      )}
     </div>
   );
 };

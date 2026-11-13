@@ -10,7 +10,9 @@ import {
   BookOpen, 
   ShieldCheck, 
   Compass, 
-  Layers 
+  Layers,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { VERIFIED_SCIENTIFIC_ANALOGS, validateCandidateGeoJSON } from '../../adapters/candidateAdapter';
 import { CandidateFeatureCollection } from '../../types';
@@ -20,6 +22,8 @@ interface CandidateManagerProps {
   onFlyToLocation: (lng: number, lat: number, zoom?: number) => void;
   onImportCandidateCollection: (collection: CandidateFeatureCollection | null) => void;
   importedCollection: CandidateFeatureCollection | null;
+  showFieldAnalogs: boolean;
+  onToggleFieldAnalogs: () => void;
   onClose: () => void;
 }
 
@@ -27,6 +31,8 @@ export const CandidateManager: React.FC<CandidateManagerProps> = ({
   onFlyToLocation,
   onImportCandidateCollection,
   importedCollection,
+  showFieldAnalogs,
+  onToggleFieldAnalogs,
   onClose
 }) => {
   const [activeTab, setActiveTab] = useState<'verified' | 'ingest' | 'coverage'>('verified');
@@ -136,10 +142,33 @@ export const CandidateManager: React.FC<CandidateManagerProps> = ({
         {/* Tab 1: Verified Field Sites */}
         {activeTab === 'verified' && (
           <div className="space-y-3">
+            {/* Map Visibility Toggle Switch */}
+            <div className="p-2.5 bg-[#fcfbf9] border border-[#ded8cb] rounded-lg flex items-center justify-between shadow-pill">
+              <div>
+                <span className="text-xs font-semibold text-[#1c2024] block">
+                  Map Markers Visibility
+                </span>
+                <span className="text-[10px] text-[#636c76]">
+                  {showFieldAnalogs ? 'Markers visible on map' : 'Markers hidden (atlas is clean)'}
+                </span>
+              </div>
+              <button
+                onClick={onToggleFieldAnalogs}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium border transition ${
+                  showFieldAnalogs
+                    ? 'bg-[#8f5635] text-white border-[#8f5635] shadow-pill'
+                    : 'bg-white text-[#636c76] border-[#ded8cb] hover:bg-[#f7f5f0]'
+                }`}
+              >
+                {showFieldAnalogs ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                <span>{showFieldAnalogs ? 'Visible' : 'Hidden'}</span>
+              </button>
+            </div>
+
             <div className="bg-[#edf5ef] border border-[#bad8c2] p-2.5 rounded-lg text-[11px] text-[#265434] flex items-start gap-2">
               <ShieldCheck className="w-4 h-4 text-[#265434] shrink-0 mt-0.5" />
               <span>
-                <strong>Academic Validation Standard:</strong> Every field site is verified through published planetary literature, Apollo/NASA mission reports, and official DOIs.
+                <strong>Academic Provenance:</strong> Every site below is a published planetary research station with documented Apollo/NASA mission campaigns and peer-reviewed literature DOIs.
               </span>
             </div>
 
@@ -157,7 +186,10 @@ export const CandidateManager: React.FC<CandidateManagerProps> = ({
                     <p className="text-[10px] text-[#636c76] font-mono">{site.locationName}</p>
                   </div>
                   <button
-                    onClick={() => onFlyToLocation(site.coordinates[0], site.coordinates[1], 10)}
+                    onClick={() => {
+                      if (!showFieldAnalogs) onToggleFieldAnalogs();
+                      onFlyToLocation(site.coordinates[0], site.coordinates[1], 10);
+                    }}
                     className="px-2.5 py-1 rounded-md bg-white hover:bg-[#f7f5f0] text-[#1c2024] border border-[#ded8cb] text-[10px] font-medium flex items-center gap-1 transition shadow-pill"
                     title="Center atlas on this analog"
                   >

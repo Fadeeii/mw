@@ -10,16 +10,22 @@ import { VERIFIED_GIBS_LAYERS, getReliableGibsDate } from './adapters/gibsAdapte
 import { ActiveLayerState, Coordinate, CandidateFeatureCollection } from './types';
 
 export function App() {
-  const [isGlobe, setIsGlobe] = useState<boolean>(false); // 2D Atlas by default for razor-sharp cartography, with 3D Globe toggle
+  const [isGlobe, setIsGlobe] = useState<boolean>(false); // 2D Atlas by default for continuous cartography, seamless toggle to 3D Globe
   const [currentDate, setCurrentDate] = useState<string>(() => getReliableGibsDate(1));
   const [activePanel, setActivePanel] = useState<'layers' | 'candidates' | 'inspector' | 'planetary' | null>(null);
   const [activePlanetaryLayerId, setActivePlanetaryLayerId] = useState<string | null>(null);
+  // 2D map defaults to ESRI cartographic topo; 3D globe defaults to NASA Blue Marble satellite imagery.
+  // These are independent so each view can maintain the most appropriate basemap for its geometry.
+  const [activeBasemapId2D, setActiveBasemapId2D] = useState<string>('esri-world-topo');
+  const [activeBasemapId3D, setActiveBasemapId3D] = useState<string>('nasa-blue-marble');
+  const activeBasemapId = isGlobe ? activeBasemapId3D : activeBasemapId2D;
+  const [showFieldAnalogs, setShowFieldAnalogs] = useState<boolean>(false); // Default off: map starts clean and uncluttered
 
-  // Initialize NASA GIBS layers with MODIS Terra TrueColor enabled by default
+  // NASA GIBS layers are independent overlays, initialized disabled by default so the clean basemap is visible
   const [activeLayers, setActiveLayers] = useState<ActiveLayerState[]>(() =>
     VERIFIED_GIBS_LAYERS.map((layer, index) => ({
       layer,
-      visible: layer.id === 'MODIS_Terra_CorrectedReflectance_TrueColor',
+      visible: false, // Independent overlay: user toggles on demand
       opacity: layer.defaultOpacity,
       order: index
     }))
@@ -77,7 +83,7 @@ export function App() {
         onFlyToLocation={handleFlyToLocation}
       />
 
-      {/* Main Geographical Canvas (Map / Globe) */}
+      {/* Main Geographical Canvas (Continuous Basemap + Independent Overlays) */}
       <main className="relative flex-1 w-full h-full overflow-hidden">
         <SpatialViewport
           isGlobe={isGlobe}
@@ -85,16 +91,20 @@ export function App() {
           activeLayers={activeLayers}
           activePlanetaryLayerId={activePlanetaryLayerId}
           importedCollection={importedCollection}
+          activeBasemapId={activeBasemapId}
+          showFieldAnalogs={showFieldAnalogs}
           onHoverCoord={setHoverCoord}
           onClickedCoord={setClickedCoord}
           flyToTarget={flyToTarget}
           hoverCoord={hoverCoord}
         />
 
-        {/* Floating Layer Selection Panel */}
+        {/* Floating Layer & Basemap Selection Panel */}
         {activePanel === 'layers' && (
           <LayerPanel
             activeLayers={activeLayers}
+            activeBasemapId={activeBasemapId}
+            onSelectBasemap={(id) => isGlobe ? setActiveBasemapId3D(id) : setActiveBasemapId2D(id)}
             onToggleLayer={handleToggleLayer}
             onChangeOpacity={handleChangeOpacity}
             onMoveLayer={handleMoveLayer}
@@ -108,6 +118,8 @@ export function App() {
             onFlyToLocation={handleFlyToLocation}
             onImportCandidateCollection={setImportedCollection}
             importedCollection={importedCollection}
+            showFieldAnalogs={showFieldAnalogs}
+            onToggleFieldAnalogs={() => setShowFieldAnalogs(prev => !prev)}
             onClose={() => setActivePanel(null)}
           />
         )}

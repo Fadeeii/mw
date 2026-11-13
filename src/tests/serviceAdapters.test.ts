@@ -51,16 +51,22 @@ describe('NASA GIBS WMTS Adapter Tests', () => {
   it('should have configurable visual enhancement config for MODIS TrueColor layers', () => {
     const terra = VERIFIED_GIBS_LAYERS.find(l => l.id === 'MODIS_Terra_CorrectedReflectance_TrueColor');
     const aqua  = VERIFIED_GIBS_LAYERS.find(l => l.id === 'MODIS_Aqua_CorrectedReflectance_TrueColor');
+    const viirs = VERIFIED_GIBS_LAYERS.find(l => l.id === 'VIIRS_SNPP_CorrectedReflectance_TrueColor');
 
-    // Both TrueColor layers must have enhancement defined
+    // All TrueColor layers must have enhancement defined
     expect(terra?.visualEnhancement).toBeDefined();
     expect(aqua?.visualEnhancement).toBeDefined();
+    expect(viirs?.visualEnhancement).toBeDefined();
 
     // MapLibre paint property ranges: contrast and saturation must be in (-1, 1)
     expect(terra!.visualEnhancement!.contrast).toBeGreaterThan(0);
     expect(terra!.visualEnhancement!.contrast).toBeLessThan(1);
     expect(aqua!.visualEnhancement!.saturation).toBeGreaterThan(0);
     expect(aqua!.visualEnhancement!.saturation).toBeLessThan(1);
+
+    // brightnessMin must be 0 for MODIS/VIIRS to avoid lifting swath gap blacks to grey
+    expect(terra!.visualEnhancement!.brightnessMin).toBe(0);
+    expect(aqua!.visualEnhancement!.brightnessMin).toBe(0);
 
     // Cesium scale: contrast > 1 means enhanced, gamma < 1 brightens midtones
     expect(terra!.visualEnhancement!.cesiumContrast).toBeGreaterThan(1);
@@ -72,7 +78,7 @@ describe('NASA GIBS WMTS Adapter Tests', () => {
     expect(terra!.visualEnhancement!.contrast).not.toBe(aqua!.visualEnhancement!.contrast);
     expect(terra!.visualEnhancement!.cesiumGamma).not.toBe(aqua!.visualEnhancement!.cesiumGamma);
 
-    // Non-TrueColor layers must NOT have enhancement (preserving scientific neutrality)
+    // Non-TrueColor imagery layers must NOT have enhancement (preserving scientific neutrality)
     const nightBand = VERIFIED_GIBS_LAYERS.find(l => l.id === 'VIIRS_SNPP_DayNightBand_ENCC');
     expect(nightBand?.visualEnhancement).toBeUndefined();
   });

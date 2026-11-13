@@ -83,10 +83,12 @@ export const Globe3D: React.FC<Globe3DProps> = ({
       baseLayer: baseLayer
     });
 
-    // Clean scientific daylight illumination across the globe
+    // Rich realistic Earth appearance — deep ocean, continental definition, natural colours
     viewer.scene.globe.enableLighting = false;
-    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#f2eee8');
-    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#f4f1ea');
+    // Deep space background (visible at poles and globe edges)
+    viewer.scene.backgroundColor = Cesium.Color.fromCssColorString('#0d1520');
+    // Globe base colour visible in unloaded tile regions — dark ocean blue
+    viewer.scene.globe.baseColor = Cesium.Color.fromCssColorString('#1a3550');
 
     // Camera initial position
     viewer.camera.setView({
@@ -185,6 +187,29 @@ export const Globe3D: React.FC<Globe3DProps> = ({
     });
 
     const newLayer = imageryLayers.addImageryProvider(newProvider, 0); // Always bottom layer
+
+    // Apply per-basemap visual enhancement on the Cesium ImageryLayer.
+    // NASA Blue Marble is a natural-colour composite — boost contrast, saturation and gamma
+    // so the globe looks like a rich Earth rather than a washed-out relief map.
+    // Other basemaps (cartographic topo, OSM) are already well-tuned for display, so they
+    // receive only neutral settings to preserve their intended appearance.
+    if (basemap.id === 'nasa-blue-marble') {
+      newLayer.contrast   = 1.4;   // Clear land/ocean/cloud separation
+      newLayer.saturation = 1.35;  // Rich natural ocean blue and green vegetation
+      newLayer.gamma      = 0.8;   // Brighten midtones (corrects display gamma for JPEG composite)
+      newLayer.brightness = 1.0;   // Neutral — Blue Marble is correctly exposed
+    } else if (basemap.id === 'esri-world-topo') {
+      newLayer.contrast   = 1.05;  // Slightly sharper for 3D projection
+      newLayer.saturation = 1.0;
+      newLayer.gamma      = 1.0;
+      newLayer.brightness = 1.0;
+    } else {
+      newLayer.contrast   = 1.0;
+      newLayer.saturation = 1.0;
+      newLayer.gamma      = 1.0;
+      newLayer.brightness = 1.0;
+    }
+
     baseImageryLayerRef.current = newLayer;
   }, [activeBasemapId]);
 
