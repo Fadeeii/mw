@@ -14,6 +14,7 @@ import {
   getPlanetaryLayerById 
 } from '../adapters/planetaryAdapter';
 
+
 describe('NASA GIBS WMTS Adapter Tests', () => {
   it('should have verified GIBS layers with valid tileMatrixSets and metadata', () => {
     expect(VERIFIED_GIBS_LAYERS.length).toBeGreaterThan(5);
@@ -45,6 +46,35 @@ describe('NASA GIBS WMTS Adapter Tests', () => {
     
     const formatted = formatToIsoDate(new Date('2025-01-01T00:00:00Z'));
     expect(formatted).toBe('2025-01-01');
+  });
+
+  it('should have configurable visual enhancement config for MODIS TrueColor layers', () => {
+    const terra = VERIFIED_GIBS_LAYERS.find(l => l.id === 'MODIS_Terra_CorrectedReflectance_TrueColor');
+    const aqua  = VERIFIED_GIBS_LAYERS.find(l => l.id === 'MODIS_Aqua_CorrectedReflectance_TrueColor');
+
+    // Both TrueColor layers must have enhancement defined
+    expect(terra?.visualEnhancement).toBeDefined();
+    expect(aqua?.visualEnhancement).toBeDefined();
+
+    // MapLibre paint property ranges: contrast and saturation must be in (-1, 1)
+    expect(terra!.visualEnhancement!.contrast).toBeGreaterThan(0);
+    expect(terra!.visualEnhancement!.contrast).toBeLessThan(1);
+    expect(aqua!.visualEnhancement!.saturation).toBeGreaterThan(0);
+    expect(aqua!.visualEnhancement!.saturation).toBeLessThan(1);
+
+    // Cesium scale: contrast > 1 means enhanced, gamma < 1 brightens midtones
+    expect(terra!.visualEnhancement!.cesiumContrast).toBeGreaterThan(1);
+    expect(terra!.visualEnhancement!.cesiumGamma).toBeLessThan(1);
+    expect(aqua!.visualEnhancement!.cesiumContrast).toBeGreaterThan(1);
+    expect(aqua!.visualEnhancement!.cesiumGamma).toBeLessThan(1);
+
+    // Terra and Aqua must be tuned independently (not identical)
+    expect(terra!.visualEnhancement!.contrast).not.toBe(aqua!.visualEnhancement!.contrast);
+    expect(terra!.visualEnhancement!.cesiumGamma).not.toBe(aqua!.visualEnhancement!.cesiumGamma);
+
+    // Non-TrueColor layers must NOT have enhancement (preserving scientific neutrality)
+    const nightBand = VERIFIED_GIBS_LAYERS.find(l => l.id === 'VIIRS_SNPP_DayNightBand_ENCC');
+    expect(nightBand?.visualEnhancement).toBeUndefined();
   });
 });
 

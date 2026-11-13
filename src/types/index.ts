@@ -1,5 +1,24 @@
 export type LayerCategory = 'imagery' | 'environmental' | 'atmosphere' | 'night';
 
+export interface GibsVisualEnhancement {
+  /** MapLibre GL raster-contrast paint property: -1 to 1 (0 = neutral, positive = more contrast) */
+  contrast?: number;
+  /** MapLibre GL raster-saturation paint property: -1 to 1 (0 = neutral, positive = more saturation) */
+  saturation?: number;
+  /** MapLibre GL raster-brightness-min: 0 to 1 (lifts shadows, 0 = neutral) */
+  brightnessMin?: number;
+  /** MapLibre GL raster-brightness-max: 0 to 1 (1 = neutral) */
+  brightnessMax?: number;
+  /** Cesium ImageryLayer contrast: > 0 (1.0 = neutral, > 1 = more contrast) */
+  cesiumContrast?: number;
+  /** Cesium ImageryLayer saturation: > 0 (1.0 = neutral, > 1 = more saturation) */
+  cesiumSaturation?: number;
+  /** Cesium ImageryLayer gamma: > 0 (1.0 = neutral, < 1 = brighten midtones) */
+  cesiumGamma?: number;
+  /** Cesium ImageryLayer brightness: > 0 (1.0 = neutral, > 1 = brighter) */
+  cesiumBrightness?: number;
+}
+
 export interface GibsLayerConfig {
   id: string;
   title: string;
@@ -16,6 +35,12 @@ export interface GibsLayerConfig {
   scientificNotes: string;
   dataQualityLimitations: string;
   maxZoom: number;
+  /**
+   * Optional per-layer visual enhancement config.
+   * Affects ONLY the rendering pipeline (MapLibre paint props / Cesium ImageryLayer props).
+   * Does NOT modify source tile data or scientific measurements.
+   */
+  visualEnhancement?: GibsVisualEnhancement;
 }
 
 export interface ActiveLayerState {

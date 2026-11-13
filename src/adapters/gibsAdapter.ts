@@ -15,13 +15,29 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'jpg',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 1.0,
+    defaultOpacity: 0.75,
     resolution: '250m / pixel',
     sensor: 'MODIS on NASA EOS Terra satellite',
     maxZoom: 9,
     description: 'Natural color daylight image composed of red, green, and blue spectral bands (1, 4, and 3). Useful for inspecting macroscopic surface terrain, desert morphologies, and volcanic deposits.',
     scientificNotes: 'Surface reflectance corrected for atmospheric gases and aerosols. Swath observation covers the entire Earth every 1 to 2 days.',
-    dataQualityLimitations: 'Sunlight required; obscured by high-altitude meteorological cloud formations and polar winter darkness.'
+    dataQualityLimitations: 'Sunlight required; obscured by high-altitude meteorological cloud formations and polar winter darkness.',
+    // Visual rendering enhancement only — does NOT alter source tile data or scientific values.
+    // MODIS CorrectedReflectance products are atmospherically corrected but not gamma-stretched
+    // for display, resulting in a washed-out appearance. These parameters compensate at the
+    // frontend rendering layer (MapLibre paint props / Cesium ImageryLayer props).
+    visualEnhancement: {
+      // MapLibre GL raster paint properties (-1 to 1 range)
+      contrast: 0.3,       // Moderate contrast lift to separate land/ocean/cloud tones
+      saturation: 0.2,     // Slight saturation boost for natural colour definition
+      brightnessMin: 0.03, // Lift deep shadows without crushing blacks
+      brightnessMax: 1.0,  // Keep full highlight range
+      // Cesium ImageryLayer properties (1.0 = neutral)
+      cesiumContrast: 1.3,    // Equivalent moderate contrast lift in Cesium scale
+      cesiumSaturation: 1.25, // Slight saturation boost
+      cesiumGamma: 0.85,      // < 1 brightens midtones (corrects display gamma)
+      cesiumBrightness: 1.05  // Very subtle overall brightening
+    }
   },
   {
     id: 'VIIRS_SNPP_CorrectedReflectance_TrueColor',
@@ -32,7 +48,7 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'jpg',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 1.0,
+    defaultOpacity: 0.75,
     resolution: '375m / pixel',
     sensor: 'VIIRS on NASA/NOAA Suomi National Polar-orbiting Partnership (SNPP)',
     maxZoom: 9,
@@ -49,13 +65,28 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'jpg',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 1.0,
+    defaultOpacity: 0.75,
     resolution: '250m / pixel',
     sensor: 'MODIS on NASA EOS Aqua satellite',
     maxZoom: 9,
     description: 'Afternoon pass (1:30 PM local equatorial crossing) complementing Terra morning pass. Enables diurnal change detection across candidate analog landscapes.',
     scientificNotes: 'Atmospherically corrected surface reflectance. Useful for diurnal thermal and illumination angle comparison.',
-    dataQualityLimitations: 'Daytime only; affected by cloud obscuration.'
+    dataQualityLimitations: 'Daytime only; affected by cloud obscuration.',
+    // Visual rendering enhancement only — does NOT alter source tile data or scientific values.
+    // Aqua afternoon pass has slightly different illumination geometry from Terra morning pass,
+    // so enhancement is tuned independently with marginally softer contrast to reflect that.
+    visualEnhancement: {
+      // MapLibre GL raster paint properties (-1 to 1 range)
+      contrast: 0.28,      // Slightly softer than Terra due to afternoon illumination geometry
+      saturation: 0.18,    // Slight saturation boost for colour definition
+      brightnessMin: 0.03, // Lift deep shadows without crushing blacks
+      brightnessMax: 1.0,  // Keep full highlight range
+      // Cesium ImageryLayer properties (1.0 = neutral)
+      cesiumContrast: 1.28,   // Slightly softer contrast than Terra
+      cesiumSaturation: 1.2,  // Matching saturation boost
+      cesiumGamma: 0.87,      // < 1 brightens midtones; slightly softer than Terra
+      cesiumBrightness: 1.03  // Very subtle brightening
+    }
   },
   {
     id: 'VIIRS_SNPP_DayNightBand_ENCC',
@@ -66,7 +97,7 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'png',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 0.85,
+    defaultOpacity: 0.8,
     resolution: '750m / pixel',
     sensor: 'VIIRS Day/Night Band (DNB) on Suomi NPP',
     maxZoom: 8,
@@ -83,7 +114,7 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'png',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 0.75,
+    defaultOpacity: 0.7,
     resolution: '1km / pixel',
     sensor: 'MODIS on Terra (Bands 31 and 32 split-window)',
     maxZoom: 7,
@@ -100,7 +131,7 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'png',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 0.75,
+    defaultOpacity: 0.7,
     resolution: '1km / pixel',
     sensor: 'MODIS on Terra (Thermal Infrared)',
     maxZoom: 7,
@@ -117,7 +148,7 @@ export const VERIFIED_GIBS_LAYERS: GibsLayerConfig[] = [
     format: 'png',
     crs: 'EPSG:3857',
     temporal: true,
-    defaultOpacity: 0.7,
+    defaultOpacity: 0.65,
     resolution: '10km / pixel',
     sensor: 'MODIS Dark Target and Deep Blue Algorithms',
     maxZoom: 6,

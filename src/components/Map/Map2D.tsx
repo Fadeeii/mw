@@ -5,12 +5,15 @@ import { ActiveLayerState, Coordinate, CandidateFeatureCollection } from '../../
 import { buildGibsTileUrl } from '../../adapters/gibsAdapter';
 import { VERIFIED_SCIENTIFIC_ANALOGS } from '../../adapters/candidateAdapter';
 import { getPlanetaryLayerById } from '../../adapters/planetaryAdapter';
+import { getBasemapById } from '../../adapters/basemapAdapter';
 
 interface Map2DProps {
   currentDate: string;
   activeLayers: ActiveLayerState[];
   activePlanetaryLayerId: string | null;
   importedCollection: CandidateFeatureCollection | null;
+  activeBasemapId: string;
+  showFieldAnalogs: boolean;
   onHoverCoord: (coord: Coordinate) => void;
   onClickedCoord: (coord: Coordinate) => void;
   flyToTarget: { lng: number; lat: number; zoom?: number } | null;
@@ -24,6 +27,8 @@ export const Map2D: React.FC<Map2DProps> = ({
   activeLayers,
   activePlanetaryLayerId,
   importedCollection,
+  activeBasemapId,
+  showFieldAnalogs,
   onHoverCoord,
   onClickedCoord,
   flyToTarget,
@@ -37,25 +42,23 @@ export const Map2D: React.FC<Map2DProps> = ({
   const clickMarkerRef = useRef<maplibregl.Marker | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
 
+  const basemap = getBasemapById(activeBasemapId);
+
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    // Professional clean cartographic basemap: CARTO Positron
+    // Professional clean continuous global basemap (No API key required)
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
       style: {
         version: 8,
         sources: {
-          'carto-positron': {
+          'continuous-basemap': {
             type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
-              'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png'
-            ],
+            tiles: [basemap.url],
             tileSize: 256,
-            attribution: '© CARTO, © OpenStreetMap contributors',
-            maxzoom: 19
+            attribution: basemap.attribution,
+            maxzoom: basemap.maxZoom
           }
         },
         layers: [
@@ -63,15 +66,15 @@ export const Map2D: React.FC<Map2DProps> = ({
             id: 'background',
             type: 'background',
             paint: {
-              'background-color': '#f2eee8' // Warm soft stone ocean
+              'background-color': '#f2eee8'
             }
           },
           {
-            id: 'carto-positron-layer',
+            id: 'continuous-basemap-layer',
             type: 'raster',
-            source: 'carto-positron',
+            source: 'continuous-basemap',
             paint: {
-              'raster-opacity': 0.95
+              'raster-opacity': 1.0
             }
           }
         ]
@@ -132,6 +135,16 @@ export const Map2D: React.FC<Map2DProps> = ({
     };
   }, []);
 
+  // Update Basemap if changed
+  useEffect(() => {
+    if (!mapRef.current || !mapLoaded) return;
+    const map = mapRef.current;
+    const src = map.getSource('continuous-basemap') as maplibregl.RasterTileSource | undefined;
+    if (src && src.setTiles) {
+      src.setTiles([basemap.url]);
+    }
+  }, [activeBasemapId, mapLoaded]);
+
   // Camera flyTo
   useEffect(() => {
     if (!mapRef.current || !flyToTarget) return;
@@ -182,7 +195,7 @@ export const Map2D: React.FC<Map2DProps> = ({
       }
     }
 
-    // 2. NASA GIBS Layers
+    // 2. NASA GIBS Overlay Layers (Independent from Basemap)
     activeLayers.forEach(({ layer, visible, opacity }) => {
       const sourceId = `gibs-source-${layer.id}`;
       const layerId = `gibs-layer-${layer.id}`;
@@ -199,15 +212,14 @@ export const Map2D: React.FC<Map2DProps> = ({
           maxzoom: layer.maxZoom
         });
       } else {
-        // @ts-ignore
         if (existingSource.setTiles) {
-          // @ts-ignore
           existingSource.setTiles([tileUrl]);
         }
       }
 
       const existingLayer = map.getLayer(layerId);
       if (!existingLayer) {
+        const enh = layer.visualEnhancement;
         map.addLayer({
           id: layerId,
           type: 'raster',
@@ -217,17 +229,29 @@ export const Map2D: React.FC<Map2DProps> = ({
           },
           paint: {
             'raster-opacity': opacity,
-            'raster-fade-duration': 250
+            'raster-fade-duration': 250,
+            // Apply configurable visual enhancement at the rendering layer only.
+            // These are MapLibre paint properties — they do not touch source tile data.
+            ...(enh?.contrast !== undefined && { 'raster-contrast': enh.contrast }),
+            ...(enh?.saturation !== undefined && { 'raster-saturation': enh.saturation }),
+            ...(enh?.brightnessMin !== undefined && { 'raster-brightness-min': enh.brightnessMin }),
+            ...(enh?.brightnessMax !== undefined && { 'raster-brightness-max': enh.brightnessMax })
           }
         });
       } else {
+        const enh = layer.visualEnhancement;
         map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
         map.setPaintProperty(layerId, 'raster-opacity', opacity);
+        // Keep enhancement in sync when layer state updates
+        if (enh?.contrast !== undefined) map.setPaintProperty(layerId, 'raster-contrast', enh.contrast);
+        if (enh?.saturation !== undefined) map.setPaintProperty(layerId, 'raster-saturation', enh.saturation);
+        if (enh?.brightnessMin !== undefined) map.setPaintProperty(layerId, 'raster-brightness-min', enh.brightnessMin);
+        if (enh?.brightnessMax !== undefined) map.setPaintProperty(layerId, 'raster-brightness-max', enh.brightnessMax);
       }
     });
   }, [mapLoaded, activeLayers, currentDate, activePlanetaryLayerId]);
 
-  // Scientific Analog Markers
+  // Scientific Analog Markers (Controlled strictly by showFieldAnalogs)
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     const map = mapRef.current;
@@ -235,52 +259,55 @@ export const Map2D: React.FC<Map2DProps> = ({
     markersRef.current.forEach((m) => m.remove());
     markersRef.current = [];
 
-    VERIFIED_SCIENTIFIC_ANALOGS.forEach((site) => {
-      const el = document.createElement('div');
-      el.className = 'cursor-pointer group';
-      el.innerHTML = `
-        <div class="relative flex items-center justify-center">
-          <div class="w-6 h-6 rounded-full bg-[#fcfbf9] border-2 border-[#8f5635] flex items-center justify-center shadow-md group-hover:scale-110 group-hover:border-[#275273] transition-all">
-            <div class="w-2 h-2 rounded-full bg-[#8f5635] group-hover:bg-[#275273] transition-colors"></div>
+    // Only display when user explicitly turns on Field Analogs catalog
+    if (showFieldAnalogs) {
+      VERIFIED_SCIENTIFIC_ANALOGS.forEach((site) => {
+        const el = document.createElement('div');
+        el.className = 'cursor-pointer group';
+        el.innerHTML = `
+          <div class="relative flex items-center justify-center">
+            <div class="w-6 h-6 rounded-full bg-[#fcfbf9] border-2 border-[#8f5635] flex items-center justify-center shadow-md group-hover:scale-110 group-hover:border-[#275273] transition-all">
+              <div class="w-2 h-2 rounded-full bg-[#8f5635] group-hover:bg-[#275273] transition-colors"></div>
+            </div>
+            <span class="absolute top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded bg-white/95 border border-[#e4dfd5] text-[10px] font-medium text-[#1c2024] shadow-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+              ${site.name}
+            </span>
           </div>
-          <span class="absolute top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-0.5 rounded bg-white/95 border border-[#e4dfd5] text-[10px] font-medium text-[#1c2024] shadow-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-            ${site.name}
-          </span>
-        </div>
-      `;
+        `;
 
-      const popupHtml = `
-        <div class="p-3.5 text-xs text-[#1c2024] font-sans max-w-xs leading-normal">
-          <div class="flex items-center gap-1.5 mb-1 text-[10px] font-mono text-[#8f5635] font-semibold uppercase tracking-wider">
-            <span>Verified Terrestrial Analog</span>
+        const popupHtml = `
+          <div class="p-3.5 text-xs text-[#1c2024] font-sans max-w-xs leading-normal">
+            <div class="flex items-center gap-1.5 mb-1 text-[10px] font-mono text-[#8f5635] font-semibold uppercase tracking-wider">
+              <span>Published Field Station Benchmark</span>
+            </div>
+            <div class="font-serif text-sm font-semibold text-[#1c2024] mb-1">
+              ${site.name}
+            </div>
+            <div class="text-[10px] font-mono text-[#636c76] mb-2">
+              ${site.locationName} (${site.coordinates[1]}°, ${site.coordinates[0]}°)
+            </div>
+            <div class="text-[11px] text-[#4a5058] mb-2.5 leading-relaxed bg-[#f7f5f0] p-2 rounded border border-[#ede9e0]">
+              ${site.abstractExcerpt}
+            </div>
+            <div class="text-[9px] text-[#636c76] border-t border-[#e4dfd5] pt-2">
+              <span class="font-semibold text-[#1c2024]">Publication Citation:</span> ${site.literatureCitation}
+            </div>
           </div>
-          <div class="font-serif text-sm font-semibold text-[#1c2024] mb-1">
-            ${site.name}
-          </div>
-          <div class="text-[10px] font-mono text-[#636c76] mb-2">
-            ${site.locationName} (${site.coordinates[1]}°, ${site.coordinates[0]}°)
-          </div>
-          <div class="text-[11px] text-[#4a5058] mb-2.5 leading-relaxed bg-[#f7f5f0] p-2 rounded border border-[#ede9e0]">
-            ${site.abstractExcerpt}
-          </div>
-          <div class="text-[9px] text-[#636c76] border-t border-[#e4dfd5] pt-2">
-            <span class="font-semibold text-[#1c2024]">Citation:</span> ${site.literatureCitation}
-          </div>
-        </div>
-      `;
+        `;
 
-      const popup = new maplibregl.Popup({ offset: 16, closeButton: true }).setHTML(popupHtml);
+        const popup = new maplibregl.Popup({ offset: 16, closeButton: true }).setHTML(popupHtml);
 
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat(site.coordinates)
-        .setPopup(popup)
-        .addTo(map);
+        const marker = new maplibregl.Marker({ element: el })
+          .setLngLat(site.coordinates)
+          .setPopup(popup)
+          .addTo(map);
 
-      markersRef.current.push(marker);
-    });
-  }, [mapLoaded]);
+        markersRef.current.push(marker);
+      });
+    }
+  }, [mapLoaded, showFieldAnalogs]);
 
-  // Role 03 Candidate GeoJSON
+  // Role 03 Candidate GeoJSON (Controlled by importedCollection)
   useEffect(() => {
     if (!mapRef.current || !mapLoaded) return;
     const map = mapRef.current;
