@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #fcfbf9;
+    color: #1c2024;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Subtle, natural scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #f7f5f0;
+}
+::-webkit-scrollbar-thumb {
+  background: #dcd7cc;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #beb8ab;
+}
+
+/* Crisp Paper Card Animation */
+@keyframes atlasAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-atlas-appear {
+  animation: atlasAppear 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* MapLibre Popups - Editorial Paper Styling */
+.maplibregl-popup-content {
+  background: #ffffff !important;
+  color: #1c2024 !important;
+  border-radius: 10px !important;
+  border: 1px solid #e4dfd5 !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  padding: 0 !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: #ffffff !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #636c76 !important;
+  padding: 4px 8px !important;
+  font-size: 16px !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #1c2024 !important;
+  background: transparent !important;
+}
+
+/* Cesium Viewer Customization */
+.cesium-widget,
+.cesium-widget canvas {
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+  outline: none !important;
+}
+
+.cesium-viewer-bottom {
+  display: flex !important;
+  bottom: 8px !important;
+  left: 12px !important;
+  font-size: 10px !important;
+  color: #636c76 !important;
+  opacity: 0.75;
+}
+
+.cesium-widget-credits {
+  font-size: 10px !important;
+  color: #636c76 !important;
+}
+
+.cesium-credit-textContainer,
+.cesium-credit-logoContainer {
+  display: inline-block !important;
+}
